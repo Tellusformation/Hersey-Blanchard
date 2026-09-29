@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auto-diagnostic de management</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#E8EAE6;
+    --ink:#20242B;
+    --ink-soft:#5B6169;
+    --line:#D2D6CF;
+    --card:#F5F6F2;
+    --accent:#3D5A73;
+    --s1:#A6493B;
+    --s2:#B8863B;
+    --s3:#4C7A6B;
+    --s4:#3B5169;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  .wrap{
+    max-width:640px;
+    margin:0 auto;
+    padding:0 20px 80px;
+  }
+  header.hero{
+    padding:44px 0 24px;
+  }
+  header.hero h1{
+    font-family:'Fraunces', serif;
+    font-optical-sizing:auto;
+    font-weight:500;
+    font-size:clamp(28px,6.5vw,40px);
+    line-height:1.1;
+    margin:0 0 10px;
+    letter-spacing:-0.01em;
+  }
+  header.hero p{
+    color:var(--ink-soft);
+    font-size:15px;
+    line-height:1.55;
+    margin:0 0 10px;
+    max-width:48ch;
+  }
+  header.hero ul{
+    color:var(--ink-soft);
+    font-size:15px;
+    line-height:1.55;
+    margin:0 0 10px;
+    padding-left:20px;
+    max-width:48ch;
+  }
+  header.hero .byline{
+    margin-top:14px;
+    font-size:13px;
+    color:var(--ink-soft);
+    border-top:1px solid var(--line);
+    padding-top:12px;
+  }
+
+  .progress-rail{
+    position:sticky;
+    top:0;
+    z-index:10;
+    background:var(--paper);
+    padding:14px 0 10px;
+  }
+  .progress-track{
+    height:3px;
+    background:var(--line);
+    border-radius:2px;
+    overflow:hidden;
+  }
+  .progress-fill{
+    height:100%;
+    background:var(--accent);
+    width:0%;
+    transition:width .25s ease;
+  }
+  .progress-label{
+    font-size:12px;
+    color:var(--ink-soft);
+    margin-top:8px;
+  }
+
+  .question{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:20px 20px 16px;
+    margin-bottom:12px;
+  }
+  .question .num{
+    font-family:'Fraunces', serif;
+    font-size:13px;
+    color:var(--ink-soft);
+    margin-bottom:6px;
+  }
+  .question .text{
+    font-size:15.5px;
+    line-height:1.48;
+    margin-bottom:16px;
+  }
+  .options{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .options button{
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:14.5px;
+    line-height:1.4;
+    text-align:left;
+    padding:12px 14px;
+    border:1px solid var(--line);
+    background:var(--paper);
+    color:var(--ink);
+    border-radius:3px;
+    cursor:pointer;
+    display:flex;
+    gap:10px;
+  }
+  .options button .letter{
+    font-family:'Fraunces', serif;
+    font-weight:500;
+    flex:none;
+    color:var(--ink-soft);
+  }
+  .options button:hover{
+    border-color:var(--accent);
+  }
+  .options button.selected{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#fff;
+  }
+  .options button.selected .letter{
+    color:#fff;
+  }
+
+  .submit-zone{
+    position:sticky;
+    bottom:0;
+    padding:16px 0 24px;
+    background:linear-gradient(to top, var(--paper) 60%, rgba(232,234,230,0));
+  }
+  .submit-btn{
+    width:100%;
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:16px;
+    font-weight:600;
+    padding:16px;
+    border-radius:3px;
+    border:none;
+    background:var(--ink);
+    color:var(--paper);
+    cursor:pointer;
+  }
+  .submit-btn:disabled{
+    background:var(--line);
+    color:var(--ink-soft);
+    cursor:not-allowed;
+  }
+  .submit-hint{
+    text-align:center;
+    font-size:13px;
+    color:var(--ink-soft);
+    margin-top:10px;
+  }
+
+  /* Results */
+  #results{display:none;}
+  .section-title{
+    font-family:'Fraunces', serif;
+    font-weight:500;
+    font-size:22px;
+    margin:0 0 4px;
+  }
+  .section-sub{
+    color:var(--ink-soft);
+    font-size:14px;
+    margin:0 0 22px;
+    line-height:1.5;
+  }
+  .block{
+    padding-bottom:36px;
+    margin-bottom:36px;
+    border-bottom:1px solid var(--line);
+  }
+  .block:last-of-type{
+    border-bottom:none;
+  }
+
+  .dominant-callout{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-left:3px solid var(--accent);
+    padding:14px 16px;
+    border-radius:2px;
+    font-size:14.5px;
+    margin-bottom:22px;
+  }
+  .dominant-callout b{
+    font-family:'Fraunces', serif;
+    font-weight:500;
+  }
+
+  .bar-row{
+    margin-bottom:20px;
+  }
+  .bar-row .bar-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:8px;
+    gap:12px;
+  }
+  .bar-row .bar-head .name{
+    font-size:15px;
+    font-weight:500;
+  }
+  .bar-row .bar-head .score{
+    font-family:'Fraunces', serif;
+    font-size:18px;
+    white-space:nowrap;
+  }
+  .bar-track{
+    height:14px;
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:2px;
+    overflow:hidden;
+  }
+  .bar-fill{
+    height:100%;
+    width:0%;
+    transition:width .7s cubic-bezier(.2,.7,.2,1);
+  }
+
+  .gauge-wrap{
+    padding-top:10px;
+  }
+  .gauge-value{
+    font-family:'Fraunces', serif;
+    font-weight:500;
+    font-size:clamp(44px,12vw,60px);
+    line-height:1;
+    letter-spacing:-0.02em;
+    margin-bottom:26px;
+  }
+  .gauge-value span{
+    font-size:0.34em;
+    color:var(--ink-soft);
+    font-family:'IBM Plex Sans', sans-serif;
+    font-weight:400;
+    margin-left:6px;
+  }
+  .gauge-track{
+    position:relative;
+    height:10px;
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:5px;
+    margin:0 6px;
+  }
+  .gauge-center-tick{
+    position:absolute;
+    top:-4px;
+    left:50%;
+    width:1px;
+    height:18px;
+    background:var(--line);
+  }
+  .gauge-fill{
+    position:absolute;
+    top:0;
+    height:100%;
+    width:0%;
+    left:50%;
+    background:var(--accent);
+    transition:left .7s cubic-bezier(.2,.7,.2,1), width .7s cubic-bezier(.2,.7,.2,1);
+  }
+  .gauge-marker{
+    position:absolute;
+    top:-15px;
+    width:3px;
+    height:40px;
+    background:var(--ink);
+    border-radius:2px;
+    left:50%;
+    transform:translateX(-50%);
+    transition:left .7s cubic-bezier(.2,.7,.2,1);
+  }
+  .gauge-labels{
+    display:flex;
+    justify-content:space-between;
+    font-size:12px;
+    color:var(--ink-soft);
+    margin:14px 6px 0;
+  }
+
+  .restart-zone{
+    margin-top:8px;
+  }
+  .restart-btn{
+    background:none;
+    border:1px solid var(--line);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:14px;
+    padding:11px 18px;
+    border-radius:3px;
+    cursor:pointer;
+  }
+  .restart-btn:hover{
+    border-color:var(--ink);
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap" id="form-view">
+  <header class="hero">
+    <h1>Auto-diagnostic de management</h1>
+    <p>Ce test vous permet d’identifier :</p>
+    <ul>
+      <li>votre style dominant.</li>
+      <li>votre souplesse d’adaptation à chaque situation.</li>
+    </ul>
+    <p>Il comporte 12 situations de la vie professionnelle, vécues à l’intérieur d’une équipe et transposables à tous types de collaborateurs.<br>Imaginez que vous êtes le responsable, le manager et qu’il s’agit de vos propres collaborateurs dans le contexte professionnel qui est le vôtre.</p>
+    <p>Agissez en 2 étapes :<br>1- Identifiez la situation.<br>2- Supposez que vous êtes impliqué dans la situation exprimée. Pensez à ce que vous feriez si vous étiez en pareille circonstance.<br>Cochez la réponse qui se rapproche le plus du comportement que vous pourriez avoir dans la situation proposée.</p>
+    <div class="byline">D'après P. Hersey et K. Blanchard</div>
+  </header>
+
+  <div class="progress-rail">
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+    <div class="progress-label" id="progress-count">0 / 12 situations répondues</div>
+  </div>
+
+  <div id="questions"></div>
+
+  <div class="submit-zone">
+    <button class="submit-btn" id="submit-btn" disabled>Voir mon résultat</button>
+    <div class="submit-hint" id="submit-hint">Répondez aux 12 situations pour continuer</div>
+  </div>
+</div>
+
+<div class="wrap" id="results">
+  <header class="hero" style="padding-bottom:0;">
+    <h1>Votre résultat</h1>
+  </header>
+
+  <div class="block">
+    <div class="section-title">Style de management dominant</div>
+    <div class="section-sub">Nombre de situations, sur 12, où votre réponse correspond à chaque style.</div>
+    <div class="dominant-callout" id="dominant-callout"></div>
+    <div id="style-bars"></div>
+  </div>
+
+  <div class="block">
+    <div class="section-title">Adéquation à la situation</div>
+    <div class="section-sub">Ce score mesure l'écart entre vos choix et les préconisations du modèle pour chaque situation. Il varie de -24 (le plus éloigné) à +24 (le plus proche), la moyenne théorique étant 0.</div>
+    <div class="gauge-wrap">
+      <div class="gauge-value" id="gauge-value">0<span>/ ±24</span></div>
+      <div class="gauge-track">
+        <div class="gauge-center-tick"></div>
+        <div class="gauge-fill" id="gauge-fill"></div>
+        <div class="gauge-marker" id="gauge-marker"></div>
+      </div>
+      <div class="gauge-labels"><span>-24</span><span>0</span><span>+24</span></div>
+    </div>
+  </div>
+
+  <div class="restart-zone">
+    <button class="restart-btn" id="restart-btn">Recommencer le questionnaire</button>
+  </div>
+</div>
+
+<script>
+const STYLE_NAMES = { S1:"Directif", S2:"Persuasif", S3:"Participatif", S4:"Délégatif" };
+const STYLE_COLORS = { S1:"var(--s1)", S2:"var(--s2)", S3:"var(--s3)", S4:"var(--s4)" };
+
+const QUESTIONS = [
+  {
+    id:1,
+    text:"Vous avez l'intention de faire des changements dans l'organisation de votre service. Des membres de votre équipe ont fait des suggestions à propos de ces changements. D'ailleurs, jusqu'ici, ils ont montré leur capacité d'adaptation dans le travail journalier. Que faire ?",
+    options:[
+      {l:"A", t:"Définir les changements et les contrôler vous-même ?"},
+      {l:"B", t:"Demander l'adhésion de l'équipe et laisser vos collaborateurs organiser la mise en application ?"},
+      {l:"C", t:"Accepter les changements proposés, mais maintenir le contrôle de la mise en application ?"},
+      {l:"D", t:"Eviter la confrontation : ne rien changer."}
+    ]
+  },
+  {
+    id:2,
+    text:"La performance de votre équipe est bonne, ainsi que les relations inter personnelles. Mais, nouveau à ce poste, vous doutez de votre capacité à diriger des collaborateurs de ce niveau.",
+    options:[
+      {l:"A", t:"Continuer à les laisser s'organiser ?"},
+      {l:"B", t:"Discuter de la situation avec eux et introduire alors les changements nécessaires ?"},
+      {l:"C", t:"Les amener peu à peu à travailler d'une façon précise, qui est la vôtre ?"},
+      {l:"D", t:"Eviter que les relations avec votre équipe ne se dégradent en étant trop directifs ?"}
+    ]
+  },
+  {
+    id:3,
+    text:"Une restructuration doit avoir lieu dans votre service. Vos collaborateurs sont compétents ; ils se sont toujours montrés à la hauteur de la tâche dans le passé. De plus, ils admettent les raisons de cette restructuration des tâches.",
+    options:[
+      {l:"A", t:"Proposer à l'équipe une certaine participation dans la mise en œuvre de ces changements, mais ne pas exercer trop de pression sur eux ?"},
+      {l:"B", t:"Faire connaître les changements décidés et les mettre en œuvre vous-même, en contrôlant soigneusement la situation ?"},
+      {l:"C", t:"Permettre à l'équipe de déterminer ses propres modes de travail ?"},
+      {l:"D", t:"Accepter leurs recommandations, mais diriger les opérations ?"}
+    ]
+  },
+  {
+    id:4,
+    text:"Les résultats de votre équipe ont baissé récemment. Atteindre les objectifs ne semble pas les concerner. Il faut continuellement leur rappeler les délais à tenir. Déjà, une fois dans le passé, redéfinir les rôles a permis d'améliorer la situation.",
+    options:[
+      {l:"A", t:"Les laisser définir leur propre programme ?"},
+      {l:"B", t:"Ecouter leurs recommandations, mais faire en sorte que les objectifs soient atteints à tout prix ?"},
+      {l:"C", t:"Redéfinir vous-même les objectifs et contrôler attentivement les résultats ?"},
+      {l:"D", t:"Permettre à l'équipe de participer à la définition des objectifs et ne pas exercer de pression ?"}
+    ]
+  },
+  {
+    id:5,
+    text:"Récemment, on vous a confié la charge d'une unité de travail qui était auparavant dirigée dans l'efficacité. Votre prédécesseur avait un style directif. Vous désirez maintenir la productivité, mais humaniser les relations de travail.",
+    options:[
+      {l:"A", t:"Convaincre votre nouvelle équipe qu'elle est utile au bon fonctionnement de l'entreprise ?"},
+      {l:"B", t:"Insister sur l'importance des délais et des objectifs à tenir ?"},
+      {l:"C", t:"Se montrer attentif, mais sans intervenir ?"},
+      {l:"D", t:"Proposer à vos collaborateurs de participer aux décisions, mais les contrôler afin que les objectifs soient atteints ?"}
+    ]
+  },
+  {
+    id:6,
+    text:"On vous a confié la direction d'un groupe de travail chargé de faire des propositions précises. Le groupe ne semble pas motivé. L'absentéisme est élevé et les réunions ont tendance à devenir des discussions de salon. Pourtant, les participants ont les compétences nécessaires pour mener à bien la tâche qu'on leur a confiée.",
+    options:[
+      {l:"A", t:"Laisser le groupe faire ce qui lui plaît ?"},
+      {l:"B", t:"Accepter les explications du groupe, mais faire en sorte que les objectifs soient respectés ?"},
+      {l:"C", t:"Rappeler les objectifs et surveiller de près leur réalisation ?"},
+      {l:"D", t:"Proposer au groupe une certaine participation dans la redéfinition des objectifs, sans exercer de pression sur lui ?"}
+    ]
+  },
+  {
+    id:7,
+    text:"Enfin, les résultats de votre équipe se sont améliorés. Vous avez fait votre possible pour que tous soient conscients du rôle qu'ils ont à jouer dans la réalisation des objectifs.",
+    options:[
+      {l:"A", t:"Poursuivre le dialogue et continuer à s'assurer que chacun est conscient de son rôle ?"},
+      {l:"B", t:"Ne prendre aucune action marquée dans une direction ou dans une autre ?"},
+      {l:"C", t:"Montrer à l'équipe qu'on a besoin d'elle pour que chacun se sente concerné ?"},
+      {l:"D", t:"Insister sur l'importance du travail qui doit à tout prix être réalisé ?"}
+    ]
+  },
+  {
+    id:8,
+    text:"Aujourd'hui, votre équipe est incapable de résoudre un problème auquel elle est confrontée. Pourtant, habituellement, elle fait face et s'organise avec efficacité. De plus, les relations entre les personnes sont bonnes.",
+    options:[
+      {l:"A", t:"Entraîner l'équipe à résoudre le problème avec méthode ?"},
+      {l:"B", t:"La laisser résoudre le problème seule ?"},
+      {l:"C", t:"Prendre des décisions, la remettre sur la voie ?"},
+      {l:"D", t:"L'encourager à élucider ce problème en se montrant disponible pour une aide, si nécessaire ?"}
+    ]
+  },
+  {
+    id:9,
+    text:"Vos collaborateurs sont, en général, capables de prendre des responsabilités, mais aujourd'hui ils ne font aucun effort, malgré votre demande.",
+    options:[
+      {l:"A", t:"Leur laisser une certaine participation dans la redéfinition des objectifs, mais sans exercer de pression sur eux ?"},
+      {l:"B", t:"Redéfinir les objectifs, en surveiller de très près la réalisation ?"},
+      {l:"C", t:"Eviter tout affrontement, n'exercer aucune pression ?"},
+      {l:"D", t:"Accepter leurs recommandations, mais insister pour que les objectifs soient respectés ?"}
+    ]
+  },
+  {
+    id:10,
+    text:"Vous venez d'être nommé à une nouvelle fonction. Votre prédécesseur s'occupait assez peu de son équipe qui faisait correctement son travail. Les relations entre les personnes sont excellentes.",
+    options:[
+      {l:"A", t:"Amener vos collaborateurs à travailler dans une ligne bien définie ?"},
+      {l:"B", t:"Leur ouvrir une certaine participation aux décisions prises et valoriser les initiatives ?"},
+      {l:"C", t:"Analyser avec eux les résultats du passé et examiner la possibilité d'adopter de nouvelles méthodes de travail ?"},
+      {l:"D", t:"Laisser le groupe travailler seul, selon ses habitudes ?"}
+    ]
+  },
+  {
+    id:11,
+    text:"Depuis peu, vous avez constaté l'émergence de difficultés internes entre vos collaborateurs. L'équipe, dans le passé, a toujours montré un très bon niveau de performance sans qu'il soit besoin d'intervenir.",
+    options:[
+      {l:"A", t:"Proposer à vos collaborateurs une solution et, éventuellement, de nouvelles méthodes de travail ?"},
+      {l:"B", t:"Les laisser résoudre leurs problèmes eux-mêmes ?"},
+      {l:"C", t:"Prendre l'ascendant sur l'équipe et corriger les habitudes défaillantes ?"},
+      {l:"D", t:"Etre disponible pour des discussions, tout en évitant de dégrader les relations entre vos collaborateurs et vous-même ?"}
+    ]
+  },
+  {
+    id:12,
+    text:"Vous avez fait un effort de compréhension et d'ouverture vis à vis de votre équipe. Vos collaborateurs n'y ont prêté aucune attention. La qualité de leur travail s'est considérablement dégradée.",
+    options:[
+      {l:"A", t:"Mettre en œuvre les procédures garantissant une meilleure qualité du travail ?"},
+      {l:"B", t:"Rester disponible pour la discussion, mais sans insistance ?"},
+      {l:"C", t:"Fixer des objectifs partagés ?"},
+      {l:"D", t:"Sensibiliser l'équipe à la nécessité d'améliorer la qualité du travail ?"}
+    ]
+  }
+];
+
+// Table 1: for each question, which style each letter counts toward
+const STYLE_MAP = {
+  1:  {A:"S1", C:"S2", B:"S3", D:"S4"},
+  2:  {C:"S1", B:"S2", D:"S3", A:"S4"},
+  3:  {B:"S1", D:"S2", A:"S3", C:"S4"},
+  4:  {C:"S1", B:"S2", D:"S3", A:"S4"},
+  5:  {B:"S1", A:"S2", D:"S3", C:"S4"},
+  6:  {C:"S1", B:"S2", D:"S3", A:"S4"},
+  7:  {D:"S1", A:"S2", C:"S3", B:"S4"},
+  8:  {C:"S1", A:"S2", D:"S3", B:"S4"},
+  9:  {B:"S1", D:"S2", A:"S3", C:"S4"},
+  10: {A:"S1", C:"S2", B:"S3", D:"S4"},
+  11: {C:"S1", A:"S2", D:"S3", B:"S4"},
+  12: {A:"S1", C:"S2", B:"S3", D:"S4"}
+};
+
+// Table 2: for each question, points earned per letter chosen
+const ADEQUACY_MAP = {
+  1:  {A:-2, B:2,  C:-1, D:1},
+  2:  {A:2,  B:-1, C:-2, D:1},
+  3:  {A:1,  B:-2, C:2,  D:-1},
+  4:  {A:-2, B:1,  C:2,  D:-1},
+  5:  {A:-1, B:1,  C:-2, D:2},
+  6:  {A:-2, B:1,  C:2,  D:-1},
+  7:  {A:2,  B:-2, C:1,  D:-1},
+  8:  {A:1,  B:-1, C:-2, D:2},
+  9:  {A:1,  B:-2, C:-1, D:2},
+  10: {A:-2, B:2,  C:-1, D:1},
+  11: {A:-1, B:2,  C:-2, D:1},
+  12: {A:2,  B:-1, C:1,  D:-2}
+};
+
+const answers = {};
+
+function renderQuestions(){
+  const container = document.getElementById('questions');
+  container.innerHTML = QUESTIONS.map(q => `
+    <div class="question" data-qid="${q.id}">
+      <div class="num">Situation ${q.id} / 12</div>
+      <div class="text">${q.text}</div>
+      <div class="options">
+        ${q.options.map(o => `<button type="button" data-letter="${o.l}" onclick="selectAnswer(${q.id}, '${o.l}', this)"><span class="letter">${o.l}.</span><span>${o.t}</span></button>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function selectAnswer(qid, letter, btn){
+  answers[qid] = letter;
+  const group = btn.parentElement;
+  [...group.children].forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  updateProgress();
+}
+
+function updateProgress(){
+  const count = Object.keys(answers).length;
+  document.getElementById('progress-fill').style.width = (count/12*100) + '%';
+  document.getElementById('progress-count').textContent = `${count} / 12 situations répondues`;
+  const submitBtn = document.getElementById('submit-btn');
+  const hint = document.getElementById('submit-hint');
+  if(count === 12){
+    submitBtn.disabled = false;
+    hint.textContent = "Les 12 situations ont une réponse";
+  } else {
+    submitBtn.disabled = true;
+    hint.textContent = `Répondez aux ${12-count} situations restantes pour continuer`;
+  }
+}
+
+function computeResults(){
+  const styleCounts = {S1:0, S2:0, S3:0, S4:0};
+  let adequacyTotal = 0;
+  QUESTIONS.forEach(q => {
+    const letter = answers[q.id];
+    const style = STYLE_MAP[q.id][letter];
+    styleCounts[style] += 1;
+    adequacyTotal += ADEQUACY_MAP[q.id][letter];
+  });
+  return { styleCounts, adequacyTotal };
+}
+
+function showResults(){
+  const { styleCounts, adequacyTotal } = computeResults();
+
+  // dominant style callout
+  let topStyle = "S1";
+  Object.keys(styleCounts).forEach(s => { if(styleCounts[s] > styleCounts[topStyle]) topStyle = s; });
+  const maxCount = styleCounts[topStyle];
+  const tied = Object.keys(styleCounts).filter(s => styleCounts[s] === maxCount);
+  const dominantText = tied.length > 1
+    ? `Egalité entre <b>${tied.map(s => STYLE_NAMES[s]).join(' et ')}</b> (${maxCount} sur 12 chacun).`
+    : `Votre style dominant est <b>${STYLE_NAMES[topStyle]}</b> (${maxCount} situations sur 12).`;
+  document.getElementById('dominant-callout').innerHTML = dominantText;
+
+  // style bars
+  const barsContainer = document.getElementById('style-bars');
+  barsContainer.innerHTML = Object.entries(STYLE_NAMES).map(([code, name]) => {
+    const score = styleCounts[code];
+    const pct = (score/12*100).toFixed(0);
+    return `
+      <div class="bar-row">
+        <div class="bar-head">
+          <span class="name">${name}</span>
+          <span class="score">${score} <span style="font-size:13px;color:var(--ink-soft);font-family:'IBM Plex Sans',sans-serif;">/ 12</span></span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" style="background:${STYLE_COLORS[code]};" data-pct="${pct}"></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // gauge
+  document.getElementById('gauge-value').innerHTML = `${adequacyTotal > 0 ? '+' : ''}${adequacyTotal}<span>/ ±24</span>`;
+  const gaugePct = ((adequacyTotal + 24) / 48 * 100);
+
+  document.getElementById('form-view').style.display = 'none';
+  document.getElementById('results').style.display = 'block';
+  window.scrollTo(0,0);
+
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.bar-fill').forEach(el => {
+      el.style.width = el.getAttribute('data-pct') + '%';
+    });
+    const marker = document.getElementById('gauge-marker');
+    const fill = document.getElementById('gauge-fill');
+    marker.style.left = gaugePct + '%';
+    if(adequacyTotal >= 0){
+      fill.style.left = '50%';
+      fill.style.width = (gaugePct - 50) + '%';
+    } else {
+      fill.style.left = gaugePct + '%';
+      fill.style.width = (50 - gaugePct) + '%';
+    }
+  });
+}
+
+document.getElementById('submit-btn').addEventListener('click', showResults);
+
+document.getElementById('restart-btn').addEventListener('click', () => {
+  Object.keys(answers).forEach(k => delete answers[k]);
+  renderQuestions();
+  updateProgress();
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('form-view').style.display = 'block';
+  window.scrollTo(0,0);
+});
+
+renderQuestions();
+</script>
+
+</body>
+</html>
